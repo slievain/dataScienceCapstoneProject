@@ -4,12 +4,9 @@ katz_backoff_model/
 old/
 performances/
 Data_Product/rsconnect/
-Detailed_Documentation/capstone_project_cache/
-Detailed_Documentation/capstone_project.html
-Detailed_Documentation/capstone_project.pdf
-Milestone_Report/Milestone_Report_cache/
-Milestone_Report/rsconnect/
-Milestone_Report/Milestone_Report.html
+Detailed_Documentation/
+Milestone_Report/
+Presentation/
 .Rapp.history
 .Rhistory
 Coursera-SwiftKey.zip

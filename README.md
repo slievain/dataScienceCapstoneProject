@@ -12,7 +12,7 @@ This report was written after a few days looking at the project. It describes th
 * Exploratory Analysis
 * Thoughts for a prediction model
 
-See documentation [here](Milestone_Report/Milestone_Report.md)
+See documentation [here](http://rpubs.com/slievain/254835)
 
 ### Data Product
 
@@ -30,12 +30,12 @@ It is constrained to be 5 slides or less and should:
 * explain how my model works,
 * describe its predictive performance quantitatively.
 
-See the slide deck [here]()
+See the slide deck [here](http://rpubs.com/slievain/254831)
 
 ### Detailed Documentation
 
 Note that this document was not required but I felt it would bring more credit to my work.
 
-See detailed documentation [here](Detailed_Documentation/capstone_project.md)
+See detailed documentation [here](http://rpubs.com/slievain/254828)
 
 

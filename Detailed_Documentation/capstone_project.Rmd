@@ -3,7 +3,6 @@ title: "Coursera Data Science - Capstone Project"
 author: "Sébastien Lievain"
 date: "23/02/2017"
 output:
-  md_document: default
   html_document: default
   pdf_document: default
 ---
