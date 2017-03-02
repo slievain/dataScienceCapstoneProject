@@ -30,7 +30,7 @@ It is constrained to be 5 slides or less and should:
 * explain how my model works,
 * describe its predictive performance quantitatively.
 
-See the slide deck [here](http://rpubs.com/slievain/254831)
+See the slide deck [here](http://rpubs.com/slievain/255047)
 
 ### Detailed Documentation
 
