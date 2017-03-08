@@ -17,9 +17,6 @@ shinyUI(fluidPage(
             color: #000000;
             background-color: #CCFF66;
             z-index: 105;
-        }
-        #errorMsg {
-            color: red;
         }")),
     
     conditionalPanel(condition = "$('html').hasClass('shiny-busy')",
@@ -29,7 +26,7 @@ shinyUI(fluidPage(
     
     sidebarLayout(
         sidebarPanel(
-            textInput("words", "Phrase (2 words exactly): ", "one of"),
+            textInput("words", "Phrase: ", "one of"),
             
             radioButtons("algo", "Algorithm:",
                          c("Stupid Back-off Model" = "stupid",
@@ -46,7 +43,6 @@ shinyUI(fluidPage(
             tabsetPanel(
                 tabPanel("Predictions",
                          br(),
-                         textOutput("errorMsg"),
                          dataTableOutput('prediction')
                 ),
                 tabPanel("User Guide",

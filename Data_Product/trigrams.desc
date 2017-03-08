@@ -1,0 +1,9 @@
+new("big.matrix.descriptor"
+    , description = structure(list(sharedType = "FileBacked", filename = "trigrams.bin", 
+    totalRows = 632618L, totalCols = 4L, rowOffset = c(0, 632618
+    ), colOffset = c(0, 4), nrow = 632618, ncol = 4, rowNames = NULL, 
+    colNames = c("Wi_2", "Wi_1", "Wi", "count"), type = "integer", 
+    separated = FALSE), .Names = c("sharedType", "filename", 
+"totalRows", "totalCols", "rowOffset", "colOffset", "nrow", "ncol", 
+"rowNames", "colNames", "type", "separated"))
+)

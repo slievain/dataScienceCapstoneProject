@@ -13,17 +13,18 @@ library(wordcloud)
 library(gridExtra)
 
 Log <- function(text, ...) {
+    msg <- sprintf(paste0(as.character(Sys.time()), ": ", text), ...)
+    
+    cat(file = stderr(), msg, "\n")
+    
     tryCatch({
         con <- socketConnection(host = "localhost", port = 22131, blocking = TRUE, server = FALSE, open = "r+")
         
-        msg <- sprintf(paste0(as.character(Sys.time()), ": ", text), ...)
-        print(msg)
-        
         writeLines(msg, con)
-        
+
         close(con)
     }, error = function(e) {
-        print(paste0("ERROR: ", e))
+        ## Nothing
     })
 }
 
@@ -286,8 +287,10 @@ calculatingNgrams <- function(ratio = 1, cutOff = .9, filter_one_freq = TRUE) {
 ## Statistics about the model
 tableStats <- function() {
     loadingVar("unigrams_dt_word")
-    bigrams <- read.big.matrix("bigrams_bm.txt", sep = ",", type = "integer", shared = TRUE, col.names = c("Wi_1", "Wi", "count"))
-    trigrams <- read.big.matrix("trigrams_bm.txt", sep = ",", type = "integer", shared = TRUE, col.names = c("Wi_2", "Wi_1", "Wi", "count"))
+    bigrams_desc <- dget("bigrams.desc")
+    bigrams <- attach.big.matrix(bigrams_desc)
+    trigrams_desc <- dget("trigrams.desc")
+    trigrams <- attach.big.matrix(trigrams_desc)
     
     vocabulary <- nrow(unigrams_dt_word)
     
@@ -315,8 +318,11 @@ plotStats <- function() {
     unigrams <- unigrams_dt_word %>%
         arrange(desc(count)) %>%
         select(word, count)
-    bigrams <- as.data.frame(as.matrix(read.big.matrix("bigrams_bm.txt", sep = ",", type = "integer", shared = TRUE, col.names = c("Wi_1", "Wi", "count"))))
-    trigrams <- as.data.frame(as.matrix(read.big.matrix("trigrams_bm.txt", sep = ",", type = "integer", shared = TRUE, col.names = c("Wi_2", "Wi_1", "Wi", "count"))))
+    
+    bigrams_desc <- dget("bigrams.desc")
+    bigrams <- attach.big.matrix(bigrams_desc)
+    trigrams_desc <- dget("trigrams.desc")
+    trigrams <- attach.big.matrix(trigrams_desc)
     
     plot1 <- ggplot(unigrams[1:20, ], aes(reorder(word, desc(count)), count)) +
         geom_bar(stat = "identity") +
@@ -324,7 +330,7 @@ plotStats <- function() {
         labs(x = "Terms", y = "Count") +
         theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(hjust = 0.5))
     
-    bigrams <- bigrams %>%
+    bigrams <- as.data.frame(as.matrix(bigrams)) %>%
         arrange(desc(count)) %>%
         mutate(
             W1 = unigrams_dt_idx[Wi_1]$word,
@@ -337,7 +343,7 @@ plotStats <- function() {
         labs(x = "Terms", y = "Count") +
         theme(axis.text.x = element_text(angle = 90, hjust = 1), plot.title = element_text(hjust = 0.5))
     
-    trigrams <- trigrams %>%
+    trigrams <- as.data.frame(as.matrix(trigrams)) %>%
         arrange(desc(count)) %>%
         mutate(
             W1 = unigrams_dt_idx[Wi_2]$word,
@@ -408,7 +414,7 @@ calcQTri <- function(WWi, WWi_1, WWi_2, AWi_2Wi_1, BWi_2Wi_1, alphaWi_2Wi_1, den
         
         if(is.null(denom)) {
             denom <- foreach(word = BWi_2Wi_1, 
-                             .export = c('calcQBi', 'unigrams_dt_idx'),
+                             .export = c('calcQBi', 'unigrams_dt_idx', 'bigrams_desc'),
                              .combine = '+') %do% {
                                  
                 require(bigmemory)
@@ -469,8 +475,10 @@ accuracyNChoices <- function(ratio = .001, N = 3) {
     loadingVar("testing_US")
     loadingVar("unigrams_dt_idx")
     loadingVar("unigrams_dt_word")
-    bigrams <- read.big.matrix("bigrams_bm.txt", sep = ",", type = "integer", shared = TRUE, col.names = c("Wi_1", "Wi", "count"))
-    trigrams <- read.big.matrix("trigrams_bm.txt", sep = ",", type = "integer", shared = TRUE, col.names = c("Wi_2", "Wi_1", "Wi", "count"))
+    bigrams_desc <- dget("bigrams.desc")
+    bigrams <- attach.big.matrix(bigrams_desc)
+    trigrams_desc <- dget("trigrams.desc")
+    trigrams <- attach.big.matrix(trigrams_desc)
     
     corpus <- VCorpus(VectorSource(testing_US[1:50, ]$doc)) # round(nrow(testing_US) * ratio, 0)
     Log("INFO: Cleaning Corpus...")
@@ -493,7 +501,7 @@ accuracyNChoices <- function(ratio = .001, N = 3) {
         filter(!is.na(Wi_1)) %>%
         filter(!is.na(Wi)) %>%
         rowwise() %>%
-        do(data.frame(Wi = .$Wi, pred = stupidPredictNextWord(paste(unigrams_dt_idx[.$Wi_2]$word, unigrams_dt_idx[.$Wi_1]$word))))  %>%  # stupidCalcQTri(.$Wi, .$Wi_1, .$Wi_2, NULL)
+        do(data.frame(Wi = .$Wi, pred = stupidPredictNextWord(paste(unigrams_dt_idx[.$Wi_2]$word, unigrams_dt_idx[.$Wi_1]$word))))  %>%
         top_n(N, pred.prob) %>%
         summarise(match = sum(Wi == pred.word_idx)) %>%
         ungroup %>% 
@@ -502,7 +510,7 @@ accuracyNChoices <- function(ratio = .001, N = 3) {
     Log(paste0("INFO: hits: ", trigrams_tb$hits, ", nb_rows: ", nb_rows))
     accuracy <- trigrams_tb$hits / nb_rows
     
-    print(paste0("accuracy: ", round(100 * accuracy, 2), "%"))
+    Log(paste0("INFO: accuracy: ", round(100 * accuracy, 2), "%"))
     
     accuracy
 }
@@ -513,10 +521,10 @@ perplexity <- function(ratio = .001) {
     loadingVar("testing_US")
     loadingVar("unigrams_dt_word")
     loadingVar("unigrams_dt_idx")
-    bigrams <- read.big.matrix("bigrams_bm.txt", sep = ",", type = "integer", shared = TRUE, col.names = c("Wi_1", "Wi", "count"))
-    bigrams_desc <- describe(bigrams)
-    trigrams <- read.big.matrix("trigrams_bm.txt", sep = ",", type = "integer", shared = TRUE, col.names = c("Wi_2", "Wi_1", "Wi", "count"))
-    trigrams_desc <- describe(trigrams)
+    bigrams_desc <- dget("bigrams.desc")
+    bigrams <- attach.big.matrix(bigrams_desc)
+    trigrams_desc <- dget("trigrams.desc")
+    trigrams <- attach.big.matrix(trigrams_desc)
     
     cluster <- makeCluster(detectCores() - 1)
     registerDoParallel(cluster)
@@ -564,12 +572,12 @@ perplexity <- function(ratio = .001) {
         l <- (1 / M) * sum(log(prob_Si$prob, base = 2))
         perplexity <- 2^(-l)
 
-        print(paste0("perplexity: ", perplexity))
+        Log(paste0("INFO: perplexity: ", perplexity))
 
     }, error = function(e) {
         print(paste0("ERROR: ", e))
     }, finally = {
-        Log("Info: finally handler called")
+        Log("INFO: finally handler called")
 
         stopCluster(cluster)
         registerDoSEQ()
@@ -582,14 +590,17 @@ perplexity <- function(ratio = .001) {
 predictNextWord <- function(words, resultNb = 10, incStopWords = TRUE, d = .5) {
     loadingVar("unigrams_dt_idx")
     loadingVar("unigrams_dt_word")
-    bigrams <- read.big.matrix("bigrams_bm.txt", sep = ",", type = "integer", shared = TRUE, col.names = c("Wi_1", "Wi", "count"))
-    bigrams_desc <- describe(bigrams)
-    trigrams <- read.big.matrix("trigrams_bm.txt", sep = ",", type = "integer", shared = TRUE, col.names = c("Wi_2", "Wi_1", "Wi", "count"))
-    trigrams_desc <- describe(trigrams)
+    bigrams_desc <- dget("bigrams.desc")
+    bigrams <- attach.big.matrix(bigrams_desc)
+    trigrams_desc <- dget("trigrams.desc")
+    trigrams <- attach.big.matrix(trigrams_desc)
     
     words <- unlist(strsplit(tolower(words), " "))
+    nb_words <- length(words)
     
-    if(length(words) == 2) {
+    if(nb_words >= 2) {
+        words <- words[(nb_words - 1):nb_words]
+        
         cluster <- makeCluster(detectCores() - 1)
         registerDoParallel(cluster)
         
@@ -687,13 +698,13 @@ predictNextWord <- function(words, resultNb = 10, incStopWords = TRUE, d = .5) {
         }, error = function(e) {
             Log(paste0("ERROR: ", e))
         }, finally = {
-            Log("Info: finally handler called")
+            Log("INFO: finally handler called")
             
             stopCluster(cluster)
             registerDoSEQ()
         })
     } else {
-        stop("The provided string should be two words long.")
+        stop("The provided string should be  at least two words long.")
     }
 }
 
@@ -702,14 +713,17 @@ stupidPredictNextWord <- function(words, resultNb = 10, incStopWords = TRUE) {
     
     loadingVar("unigrams_dt_idx")
     loadingVar("unigrams_dt_word")
-    bigrams <- read.big.matrix("bigrams_bm.txt", sep = ",", type = "integer", shared = TRUE, col.names = c("Wi_1", "Wi", "count"))
-    bigrams_desc <- describe(bigrams)
-    trigrams <- read.big.matrix("trigrams_bm.txt", sep = ",", type = "integer", shared = TRUE, col.names = c("Wi_2", "Wi_1", "Wi", "count"))
-    trigrams_desc <- describe(trigrams)
+    bigrams_desc <- dget("bigrams.desc")
+    bigrams <- attach.big.matrix(bigrams_desc)
+    trigrams_desc <- dget("trigrams.desc")
+    trigrams <- attach.big.matrix(trigrams_desc)
     
     words <- unlist(strsplit(tolower(words), " "))
+    nb_words <- length(words)
     
-    if(length(words) == 2) {
+    if(nb_words >= 2) {
+        words <- words[(nb_words - 1):nb_words]
+        
         cluster <- makeCluster(detectCores() - 1)
         registerDoParallel(cluster)
         
@@ -770,13 +784,13 @@ stupidPredictNextWord <- function(words, resultNb = 10, incStopWords = TRUE) {
         }, error = function(e) {
             Log(paste0("ERROR: ", e))
         }, finally = {
-            Log("Info: finally handler called")
+            Log("INFO: finally handler called")
             
             stopCluster(cluster)
             registerDoSEQ()
         })
     } else {
-        stop("The provided string should be two words long.")
+        stop("The provided string should be at least two words long.")
     }
 }
 
@@ -815,13 +829,11 @@ optimizeModel <- function(sampling = c(.20, .25, .30, 1), cutoff = c(.8, .85, .9
         file.remove("unigrams_dt_word.rda")
         file.remove("unigrams_dt_idx.rda")
         file.remove("bigrams_bm.txt")
+        file.remove("bigrams.desc")
+        file.remove("bigrams.bin")
         file.remove("trigrams_bm.txt")
-        
-        print(paste(
-            round(100 * model_params[i, ]$sampling, 0),
-            round(100 * model_params[i, ]$cutoff, 0),
-            model_params[i, ]$filter_one_freq,
-            sep = "_"))
+        file.remove("trigrams.desc")
+        file.remove("trigrams.bin")
         
         results[i, "code"] <- paste(
             round(100 * model_params[i, ]$sampling, 0),
@@ -839,13 +851,14 @@ optimizeModel <- function(sampling = c(.20, .25, .30, 1), cutoff = c(.8, .85, .9
             model_params[i, ]$filter_one_freq)
         
         
-        print("calculatingNgrams...")
+        Log("calculatingNgrams...")
         calculatingNgrams(model_params[i, ]$sampling, model_params[i, ]$cutoff, model_params[i, ]$filter_one_freq)
         gc()
         
         load("unigrams_dt_word.rda")
-        bigrams <- read.big.matrix("bigrams_bm.txt", sep = ",", type = "integer", shared = TRUE, col.names = c("Wi_1", "Wi", "count"))
-        trigrams <- read.big.matrix("trigrams_bm.txt", sep = ",", type = "integer", shared = TRUE, col.names = c("Wi_2", "Wi_1", "Wi", "count"))
+        
+        bigrams  <- read.big.matrix("bigrams_bm.txt",  sep = ",", type = "integer", shared = TRUE, col.names = c("Wi_1", "Wi", "count"), descriptorfile = "bigrams.desc", backingfile = "bigrams.bin")
+        trigrams <- read.big.matrix("trigrams_bm.txt", sep = ",", type = "integer", shared = TRUE, col.names = c("Wi_2", "Wi_1", "Wi", "count"), descriptorfile = "trigrams.desc", backingfile = "trigrams.bin")
         
         results[i, ]$unigrams <- nrow(unigrams_dt_word)
         results[i, ]$bigrams <- nrow(bigrams)
@@ -854,7 +867,7 @@ optimizeModel <- function(sampling = c(.20, .25, .30, 1), cutoff = c(.8, .85, .9
         results[i, ]$stupidPred <- system.time(stupidPredictNextWord("one of"))[["elapsed"]]
         results[i, ]$pred <- system.time(predictNextWord("one of"))[["elapsed"]]
         
-        print("accuracyNChoices...")
+        Log("accuracyNChoices...")
         results[i, ]$accuracy <- accuracyNChoices()
         
         save(results, file = "results.rda")
