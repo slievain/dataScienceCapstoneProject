@@ -18,7 +18,7 @@ See documentation [here](http://rpubs.com/slievain/254835)
 
 A data product hosted on shinyapps.io was created to showcase my predictive model.
 
-See the data product [here](https://slievain.shinyapps.io/data_science-capstone_project/)
+See the data product [here](http://84.39.36.234:3838/capstone_project/)
 
 ### Slide Deck
 
@@ -30,7 +30,7 @@ It is constrained to be 5 slides or less and should:
 * explain how my model works,
 * describe its predictive performance quantitatively.
 
-See the slide deck [here](http://rpubs.com/slievain/255047)
+See the slide deck [here](http://rpubs.com/slievain/256832)
 
 ### Detailed Documentation
 
